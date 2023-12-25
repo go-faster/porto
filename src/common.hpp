@@ -120,7 +120,7 @@ constexpr const char *PORTO_PORTOCTL_PATH = "/usr/sbin/portoctl";
 constexpr uint64_t CONTAINER_NAME_MAX = 128;
 constexpr uint64_t CONTAINER_PATH_MAX = 200;
 constexpr uint64_t CONTAINER_PATH_MAX_FOR_SUPERUSER = 220;
-constexpr uint64_t RUN_SUBDIR_LIMIT = 100u;
+constexpr uint64_t RUN_SUBDIR_LIMIT = 4096u;
 constexpr uint64_t PRIVATE_VALUE_MAX = 4096;
 constexpr uint64_t CONTAINER_COMMAND_MAX = 128 * 1024;    // ARG_MAX from include/uapi/linux/limits.h
 
