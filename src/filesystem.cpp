@@ -39,6 +39,7 @@ static std::vector<TPath> SystemPaths = {
 
 static std::vector<TPath> ExcludedSystemPaths = {
     "/var/lib",
+    "/proc/sys/net/",
 };
 
 bool IsSystemPath(const TPath &path) {
