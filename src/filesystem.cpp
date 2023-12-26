@@ -899,7 +899,7 @@ TError TMountNamespace::Setup(const TContainer &ct) {
     if (error)
         return error;
 
-    if ((!EnableDockerMode || !ct.OwnerCred.IsRootUser() || !ct.DockerMode) && !ct.InUserNs()) {
+    if (!ct.OwnerCred.IsRootUser() && !ct.InUserNs()) {
         error = ProtectProc();
         if (error)
             return error;
