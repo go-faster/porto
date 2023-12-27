@@ -2407,8 +2407,19 @@ TError TVolume::Configure(const TPath &target_root) {
         if (!StoragePath.IsNormal())
             return TError(EError::InvalidPath, "Storage path must be normalized");
         StoragePath = CL->ResolvePath(StoragePath);
+        
         if (!StoragePath.Exists())
-            return TError(EError::InvalidPath, "Storage path {} does not exist",  StoragePath.ToString());
+            // NOTE(tdakkota): Create directory for binds, if it does not exist yet
+            //  Docker does the same thing, see
+            //  https://github.com/moby/moby/blob/46f7ab808b9504d735d600e259ca0723f76fb164/volume/mounts/mounts.go#L146-L165
+            if (BackendType == "bind") {
+                L_DBG("Storage path {} does not exist, create it",  StoragePath.ToString());
+                error = StoragePath.MkdirAllChown(0755, RootUser, RootGroup)
+                if (error) 
+                    return error
+            } else {
+                return TError(EError::InvalidPath, "Storage path {} does not exist",  StoragePath.ToString());
+            }
         if (IsSystemPath(StoragePath)) {
             error = CL->DirWriteAccess(StoragePath, false);
             if (error)
