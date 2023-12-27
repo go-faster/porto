@@ -635,6 +635,31 @@ TError TPath::MkdirAll(unsigned int mode, bool ignore) const {
     return OK;
 }
 
+TError TPath::MkdirAllChown(unsigned int mode, uid_t uid, gid_t gid) const {
+    std::vector<TPath> paths;
+    TPath path(Path);
+    TError error;
+
+    while (!path.Exists()) {
+        paths.push_back(path);
+        path = path.DirName();
+    }
+
+    if (!path.IsDirectoryFollow())
+        return TError("Not a directory: {}", path);
+
+    for (auto path = paths.rbegin(); path != paths.rend(); path++) {
+        error = path->Mkdir(mode);
+        if (error)
+            return error;
+        error = path->Chown(uid, gid);
+        if (error)
+            return error;
+    }
+
+    return OK;
+}
+
 TError TPath::MkdirTmp(const TPath &parent, const std::string &prefix, unsigned int mode) {
     Path = (parent / (prefix + "XXXXXX")).Path;
     if (!mkdtemp(&Path[0]))
