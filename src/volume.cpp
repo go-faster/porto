@@ -2408,7 +2408,7 @@ TError TVolume::Configure(const TPath &target_root) {
             return TError(EError::InvalidPath, "Storage path must be normalized");
         StoragePath = CL->ResolvePath(StoragePath);
         if (!StoragePath.Exists())
-            return TError(EError::InvalidPath, "Storage path does not exist");
+            return TError(EError::InvalidPath, "Storage path {} does not exist",  StoragePath.ToString());
         if (IsSystemPath(StoragePath)) {
             error = CL->DirWriteAccess(StoragePath, false);
             if (error)
