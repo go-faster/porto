@@ -6,6 +6,11 @@ on:
     paths:
       - 'debian/changelog'
 
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
 env:
   BUILD_TYPE: Release
   BUILD_DEPENDENCIES: |
