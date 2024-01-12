@@ -3139,23 +3139,32 @@ TError TVolume::MountLink(std::shared_ptr<TVolumeLink> link) {
 
         if (!BindFileStorage() || (it != target_components.end() - 1)) {
             /* Remove symlink */
+            bool create_dir = true;
             if (error.Errno == ELOOP || error.Errno == ENOTDIR) {
                 TPath symlink_target;
-                if (target_dir.ReadlinkAt(name, symlink_target))
+                TError symlink_error;
+                symlink_error = target_dir.ReadlinkAt(name, symlink_target);
+                if (symlink_error)
                     break; /* Not at symlink */
-                L_ACT("Remove symlink {} to {}", target_dir.RealPath() / name, symlink_target);
-                error = target_dir.UnlinkAt(name);
+
+                TPath real_symlink_target;
+                real_symlink_target = link->Container->RootPath / symlink_target;
+                error = target_dir.OpenDirStrict(real_symlink_target);
+                if (error && error.Errno != ENOENT) {
+                    break;
+                } else {
+                    create_dir = false;
+                }
+            }
+            if (create_dir) {
+                L_ACT("Create directory {}", target_dir.RealPath() / name);
+                error = target_dir.MkdirAt(name, 0775);
+                if (error && error.Errno != EEXIST)
+                    break;
+                error = target_dir.OpenDirStrictAt(target_dir, name);
                 if (error)
                     break;
             }
-
-            L_ACT("Create directory {}", target_dir.RealPath() / name);
-            error = target_dir.MkdirAt(name, 0775);
-            if (error)
-                break;
-            error = target_dir.OpenDirStrictAt(target_dir, name);
-            if (error)
-                break;
         } else {
             L_ACT("Create file {}", target_dir.RealPath() / name);
             error = target_dir.MkfileAt(name, 0644);
@@ -3173,12 +3182,13 @@ TError TVolume::MountLink(std::shared_ptr<TVolumeLink> link) {
     if (error)
         goto undo;
 
+    // NOTE(tdakkota): fails, if there is symlink in target path.
     /* Sanity check */
-    real_target = target_dir.RealPath();
-    if (real_target != host_target) {
-        error = TError(EError::InvalidPath, "Volume {} link {} real path is {}", Path, host_target, real_target);
-        goto undo;
-    }
+    // real_target = target_dir.RealPath();
+    // if (real_target != host_target) {
+    //     error = TError(EError::InvalidPath, "Volume {} link {} real path is {}", Path, host_target, real_target);
+    //     goto undo;
+    // }
 
     if (IsReadOnly || link->ReadOnly)
         flags |= MS_RDONLY;
