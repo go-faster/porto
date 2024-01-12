@@ -83,6 +83,19 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j$(nproc)
 
+    - name: Prepare archive
+      run: |
+        mkdir -p ${{github.workspace}}/build/bin
+        cp ${{github.workspace}}/build/portod ${{github.workspace}}/build/bin
+        cp ${{github.workspace}}/build/portoctl ${{github.workspace}}/build/bin
+        tar porto_${{env.UBUNTU_NAME}}_${{env.VERSION}}_${{matrix.arch}}.tgz -C ${{github.workspace}}/build/bin .
+
+    - name: Upload archive
+      uses: actions/upload-artifact@v2
+      with:
+        name: packages
+        path: porto_${{env.UBUNTU_NAME}}_${{env.VERSION}}_${{matrix.arch}}.tgz
+
     - name: Setup ccache in PATH
       run: |
         export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
@@ -145,6 +158,26 @@ jobs:
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       with:
         upload_url: ${{steps.create_release.outputs.upload_url}}
+        asset_path: ./porto_focal_${{env.VERSION}}_amd64.tgz
+        asset_name: porto_focal_${{env.VERSION}}_amd64.tgz
+        asset_content_type: application/gzip
+
+    - name: Upload release asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      with:
+        upload_url: ${{steps.create_release.outputs.upload_url}}
         asset_path: ./porto_jammy_${{env.VERSION}}_amd64.deb
         asset_name: porto_jammy_${{env.VERSION}}_amd64.deb
         asset_content_type: application/vnd.debian.binary-package
+
+    - name: Upload release asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      with:
+        upload_url: ${{steps.create_release.outputs.upload_url}}
+        asset_path: ./porto_jammy_${{env.VERSION}}_amd64.tgz
+        asset_name: porto_jammy_${{env.VERSION}}_amd64.tgz
+        asset_content_type: application/gzip
