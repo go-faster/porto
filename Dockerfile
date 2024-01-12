@@ -28,3 +28,7 @@ WORKDIR /porto/build
 
 RUN cmake ..
 RUN make -j$(nproc)
+
+RUN mkdir bin
+RUN cp portod portoctl bin
+RUN tar czvf porto.tgz -C bin .
