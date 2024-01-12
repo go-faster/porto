@@ -6,6 +6,11 @@ on:
     paths:
       - 'debian/changelog'
 
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
 env:
   BUILD_TYPE: Release
   BUILD_DEPENDENCIES: |
@@ -36,8 +41,8 @@ env:
         python3-setuptools \
         bash-completion
 
-jobs:      
-  build_deb:
+jobs:
+  build:
     strategy:
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04]
@@ -54,6 +59,12 @@ jobs:
         sudo apt install -y ${{env.BUILD_DEPENDENCIES}}
         sudo apt install -y ${{env.BUILD_DEB_DEPENDENCIES}}
 
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        create-symlink: true
+        key: ${{ github.job }}-${{ matrix.os }}
+
     - name: Set environment variables
       run: |
         echo "VERSION=$(sed -nE 's#.*\((.*)\).*#\1#p;q' debian/changelog)" >> $GITHUB_ENV
@@ -65,7 +76,30 @@ jobs:
             echo "UBUNTU_NAME=jammy" >> $GITHUB_ENV
             ;;
         esac
-        
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j$(nproc)
+
+    - name: Prepare archive
+      run: |
+        mkdir -p ${{github.workspace}}/build/bin
+        cp ${{github.workspace}}/build/portod ${{github.workspace}}/build/bin
+        cp ${{github.workspace}}/build/portoctl ${{github.workspace}}/build/bin
+        tar czvf porto_${{env.UBUNTU_NAME}}_v${{env.VERSION}}_${{matrix.arch}}.tgz -C ${{github.workspace}}/build/bin .
+
+    - name: Upload archive
+      uses: actions/upload-artifact@v2
+      with:
+        name: packages
+        path: porto_${{env.UBUNTU_NAME}}_v${{env.VERSION}}_${{matrix.arch}}.tgz
+
+    - name: Setup ccache in PATH
+      run: |
+        export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+
     - name: Build Debian package
       run: |
         echo Porto version: ${{env.VERSION}}
@@ -81,7 +115,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: build_deb
+    needs: build
     permissions: write-all
     steps:
     - name: Download Debian package
@@ -108,7 +142,7 @@ jobs:
         draft: false
         prerelease: false
 
-    - name: Upload release asset
+    - name: Upload focal (22.04) deb
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -118,7 +152,17 @@ jobs:
         asset_name: porto_focal_${{env.VERSION}}_amd64.deb
         asset_content_type: application/vnd.debian.binary-package
 
-    - name: Upload release asset
+    - name: Upload focal (20.04) tgz
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      with:
+        upload_url: ${{steps.create_release.outputs.upload_url}}
+        asset_path: ./porto_focal_v${{env.VERSION}}_amd64.tgz
+        asset_name: porto_focal_v${{env.VERSION}}_amd64.tgz
+        asset_content_type: application/gzip
+
+    - name: Upload jammy (22.04) deb
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -127,3 +171,13 @@ jobs:
         asset_path: ./porto_jammy_${{env.VERSION}}_amd64.deb
         asset_name: porto_jammy_${{env.VERSION}}_amd64.deb
         asset_content_type: application/vnd.debian.binary-package
+
+    - name: Upload jammy (22.04) tgz
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      with:
+        upload_url: ${{steps.create_release.outputs.upload_url}}
+        asset_path: ./porto_jammy_v${{env.VERSION}}_amd64.tgz
+        asset_name: porto_jammy_v${{env.VERSION}}_amd64.tgz
+        asset_content_type: application/gzip
