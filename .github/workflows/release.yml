@@ -78,6 +78,10 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j$(nproc)
 
+    - name: Setup ccache in PATH
+      run: |
+        export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+
     - name: Build Debian package
       run: |
         echo Porto version: ${{env.VERSION}}
