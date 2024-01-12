@@ -34,3 +34,6 @@ Makefile
 /test/Testing/
 .vscode
 .idea
+
+
+/cmake-build-debug
