@@ -278,9 +278,20 @@ TError TBindMount::Mount(const TCred &cred, const TPath &target_root) const {
 
 TError TMountNamespace::MountRun(const TContainer &ct) {
     TPath run = "run";
+    TError error;
+    // NOTE(tdakkota): do not mount `/run` to avoid conflicts
+    //  with Kubernetes secret mount.
+    if (!run.Exists()) {
+        error = run.Mkdir(0755);
+        if (error)
+            return error;
+        return OK;
+    } else {
+        return OK;
+    }
+
     std::vector<std::string> run_paths, subdirs;
     std::vector<struct stat> run_paths_stat;
-    TError error;
 
     if (run.Exists()) {
         error = run.ListSubdirs(subdirs);
