@@ -548,6 +548,10 @@ void TDockerImage::DownloadLayer(const TPath &place, const TLayer &layer, TClien
         (void)layer.Remove(place);
     }
 
+    error = archivePath.DirName().MkdirAll(0755);
+    if (error && error.Errno != EEXIST)
+        L_ERR("Cannot create directory {}: {}", archivePath.DirName(), error);
+
     error = DownloadFile(url, archivePath);
     if (error && !token.empty()) {
         // retry if registry api expects to receive token and we received code 401
