@@ -397,7 +397,7 @@ TError TMountNamespace::RemountRun(const TContainer &ct) {
 
     TPath run_lock("/run/lock");
     error = run_lock.MkdirAll(01777);
-    if (error)
+    if (error && error.Errno != EEXIST)
         return error;
 
     error = run_lock.BindRemount(run_lock, MS_NOSUID | MS_NODEV | MS_NOEXEC);
@@ -406,7 +406,7 @@ TError TMountNamespace::RemountRun(const TContainer &ct) {
 
     TPath run_shm("/run/shm"), dev_shm("/dev/shm");
     error = run_shm.MkdirAll(01777);
-    if (error)
+    if (error && error.Errno != EEXIST)
         return error;
 
     error = dev_shm.UmountAll();
@@ -428,11 +428,11 @@ TError TMountNamespace::RemountRun(const TContainer &ct) {
 
         if (src.IsDirectoryStrict()) {
             error = dst.MkdirAll(0755);
-            if (error)
+            if (error && error.Errno != EEXIST)
                 return error;
         } else {
             error = dst.DirName().MkdirAll(0755);
-            if (error)
+            if (error && error.Errno != EEXIST)
                 return error;
             error = dst.Mkfile(0);
             if (error)
@@ -690,7 +690,7 @@ TError TMountNamespace::SetupRoot(const TContainer &ct) {
 
     for (auto &d : dirs) {
         error = d.path.Mkdir(d.mode);
-        if (error)
+        if (error && error.Errno != EEXIST)
             return error;
     }
 
