@@ -360,13 +360,13 @@ TError TDockerImage::ParseManifest() {
     if (error || !manifestJson.Contains("schemaVersion"))
         return TError(EError::Docker, "schemaVersion is not found in manifest");
 
-    int schemaVersion;
-    error = manifestJson["schemaVersion"].Get(schemaVersion);
+    error = manifestJson["schemaVersion"].Get(SchemaVersion);
     if (error)
         return TError("Failed to get schema version: {}", error);
 
-    if (SchemaVersion != schemaVersion)
-        return TError(EError::Docker, "schemaVersions are not equal");
+    // NOTE(tdakkota): fails to load existing v1 manifest images
+    // if (SchemaVersion != schemaVersion)
+    //     return TError(EError::Docker, "schemaVersions are not equal: expected {}, got {}", SchemaVersion, schemaVersion);
 
     if (SchemaVersion == 1) {
         // there is no size info
@@ -853,7 +853,7 @@ TError TDockerImage::List(const TPath &place, std::vector<TDockerImage> &images,
         TDockerImage image(walk.Name());
         error = image.Load(place);
         if (error) {
-            L_ERR("{}", error);
+            L_ERR("List image, load error: {}", error);
             continue;
         }
 
