@@ -299,7 +299,11 @@ TError TDockerImage::DownloadManifest(const THttpClient &client) {
             Manifest = manifests;
         } else if ((mediaType == "application/vnd.docker.distribution.manifest.list.v2+json") ||
                    (mediaType == "application/vnd.oci.image.index.v1+json")) {
+#ifdef __x86_64__
             const std::string targetArch = "amd64";
+#else
+            const std::string targetArch = "arm64";
+#endif
             const std::string targetOs = "linux";
             bool found = false;
 
