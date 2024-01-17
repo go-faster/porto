@@ -1,6 +1,6 @@
-porto (5.3.30-alpha.6) UNRELEASED; urgency=low
+porto (5.3.30-alpha.7) UNRELEASED; urgency=low
 
-  * fixes for cilium
+  * fixes for ciliumп
 
  -- ernado <team@go-faster.org>  Fri, 12 Jan 2024 21:32:29 +0300
 
