@@ -88,6 +88,10 @@ jobs:
         mkdir -p ${{github.workspace}}/build/bin
         cp ${{github.workspace}}/build/portod ${{github.workspace}}/build/bin
         cp ${{github.workspace}}/build/portoctl ${{github.workspace}}/build/bin
+        cp ${{github.workspace}}/build/portoinit ${{github.workspace}}/build/bin
+        cp ${{github.workspace}}/build/hijack ${{github.workspace}}/build/bin
+        cp ${{github.workspace}}/build/portotest ${{github.workspace}}/build/bin
+        cp ${{github.workspace}}/build/portoctl-top ${{github.workspace}}/build/bin
         tar czvf porto_${{env.UBUNTU_NAME}}_v${{env.VERSION}}_${{matrix.arch}}.tgz -C ${{github.workspace}}/build/bin .
 
     - name: Upload archive
