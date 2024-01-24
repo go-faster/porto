@@ -4354,6 +4354,12 @@ TError TVolume::Create(const rpc::TVolumeSpec &spec,
         if (Volumes.count(path))
             return TError(EError::VolumeAlreadyExists, "Volume already exists");
 
+        if (!path.Exists()) {
+            error = path.MkdirAll(0755);
+            if (error) 
+                return error;
+        }
+
         TFile path_dir;
         error = path_dir.OpenPath(path);
         if (error)
