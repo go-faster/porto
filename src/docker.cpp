@@ -534,15 +534,16 @@ TError TDockerImage::ParseConfig() {
     return OK;
 }
 
-void TDockerImage::DownloadLayer(const TPath &place, const TLayer &layer, TClient *client, const std::string &url, const std::string &token) {
+TError TDockerImage::DownloadLayer(const TPath &place, const TLayer &layer, TClient *client, const std::string &url, const std::string &token) {
     TError error;
     TPath archivePath = layer.ArchivePath(place);
 
     CL = client;
 
-    error = archivePath.DirName().MkdirAll(0755, true);
-    if (error)
-        L_ERR("Cannot create directory {}: {}", archivePath.DirName(), error);
+    error = archivePath.DirName().MkdirAll(0755);
+    if (error && error.Errno != EEXIST) {
+        return TError("Cannot create directory {}: {}", archivePath.DirName(), error);
+    }
 
     auto layerLock = TFileMutex::MakeDirLock(archivePath.DirName());
 
@@ -550,27 +551,26 @@ void TDockerImage::DownloadLayer(const TPath &place, const TLayer &layer, TClien
         struct stat st;
         error = archivePath.StatStrict(st);
         if (error) {
-            L_ERR("Cannot stat archive path: {}", error);
-            return;
+            return TError("Cannot stat archive path: {}", error);
         }
 
         if ((size_t)st.st_size == layer.Size)
-            return;
+            return OK;
 
         (void)layer.Remove(place);
     }
 
     error = archivePath.DirName().MkdirAll(0755);
-    if (error && error.Errno != EEXIST)
-        L_ERR("Cannot create directory {}: {}", archivePath.DirName(), error);
+    if (error && error.Errno != EEXIST) {
+        return TError("Cannot create directory {}: {}", archivePath.DirName(), error);
+    }
 
     error = DownloadFile(url, archivePath);
     if (error && !token.empty()) {
         // retry if registry api expects to receive token and we received code 401
         error = DownloadFile(url, archivePath, { "Authorization: " + token });
         if (error) {
-            L_ERR("Cannot download layer: {}", error);
-            return;
+            return TError("Cannot download layer: {}", error);
         }
     }
 
@@ -578,35 +578,34 @@ void TDockerImage::DownloadLayer(const TPath &place, const TLayer &layer, TClien
 
     error = portoLayer.Resolve(EStorageType::DockerLayer, place, layer.Digest);
     if (error) {
-        L_ERR("Cannot resolve layer storage: {}", error);
-        return;
+        return TError("Cannot resolve layer storage: {}", error);
     }
 
 
     error = portoLayer.ImportArchive(archivePath, PORTO_HELPERS_CGROUP);
     if (error) {
-        L_ERR("Cannot import archive: {}", error);
-        return;
+        return TError("Cannot import archive: {}", error);
     }
 
 
     error = TStorage::SanitizeLayer(portoLayer.Path);
     if (error) {
-        L_ERR("Cannot sanitize layer: {}", error);
-        return;
+        return TError("Cannot sanitize layer: {}", error);
     }
+
+    return OK;
 }
 
 TError TDockerImage::DownloadLayers(const TPath &place) const {
-    std::vector<std::thread> threads;
+    TError error;
 
-    // download layers using threads
-    for (const auto &layer: Layers)
-        threads.emplace_back(TDockerImage::DownloadLayer, place, layer, std::ref(CL), fmt::format("https://{}{}", Registry, BlobsUrl(layer.Digest)), AuthToken);
-
-    // waiting all downloads
-    for (auto &t: threads)
-        t.join();
+    for (const auto &layer: Layers) {
+        std::string blob_url = fmt::format("https://{}{}", Registry, BlobsUrl(layer.Digest));
+        error = TDockerImage::DownloadLayer(place, layer, std::ref(CL), blob_url, AuthToken);
+        if (error) {
+            return TError("Layer {} download failed: {}", blob_url, error);
+        }
+    }
 
     return OK;
 }
@@ -627,8 +626,8 @@ TError TDockerImage::LinkTag(const TPath &place) const {
     TPath digestPath = DigestPath(place);
     TPath tagPath = TagPath(place);
 
-    error = tagPath.DirName().MkdirAll(0755, true);
-    if (error)
+    error = tagPath.DirName().MkdirAll(0755);
+    if (error && error.Errno != EEXIST)
         L_ERR("Cannot create directory {}: {}", tagPath.DirName(), error);
 
     auto tagLock = TFileMutex::MakeDirLock(tagPath.DirName());
