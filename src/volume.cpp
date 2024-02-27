@@ -3147,8 +3147,16 @@ TError TVolume::MountLink(std::shared_ptr<TVolumeLink> link) {
                 if (symlink_error)
                     break; /* Not at symlink */
 
+                TPath current_dir = target_dir.RealPath();
                 TPath real_symlink_target;
-                real_symlink_target = link->Container->RootPath / symlink_target;
+                if (symlink_target.IsAbsolute()) {
+                    real_symlink_target = link->Container->RootPath / symlink_target;
+                } else {
+                    // Compute symlink against current directory.
+                    real_symlink_target = current_dir / symlink_target;
+                }
+                real_symlink_target = real_symlink_target.NormalPath();
+                L_DBG("Resolved symlink {} at {} to {}", symlink_target, current_dir, real_symlink_target);
                 error = target_dir.OpenDirStrict(real_symlink_target);
                 if (error && error.Errno != ENOENT) {
                     break;
