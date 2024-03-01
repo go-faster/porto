@@ -825,9 +825,9 @@ TError TMountNamespace::Setup(const TContainer &ct) {
     }*/
 
     if (RootRo) {
-        error = dot.Remount(MS_BIND | MS_REC | MS_RDONLY);
-        if (error)
-            return error;
+        // error = dot.Remount(MS_BIND | MS_REC | MS_RDONLY);
+        // if (error)
+        //     return error;
     }
 
     // remount proc in pid-ns
